@@ -3,10 +3,14 @@ import tkinter as tk
 import numpy as np
 from PIL import ImageGrab
 from ultralytics import YOLO
+import torch
 
 TRANSPARENT_MASK_COLOR = "#00FF00"
 
-model = YOLO("yolo26x.pt")
+DEVICE = 0 if torch.cuda.is_available() else "cpu"
+print(f"Running YOLO inference on: {'GPU (CUDA)' if DEVICE == 0 else 'CPU'}")
+
+model = YOLO("models/yolo26x.pt")
 
 
 def capture_and_detect(root: tk.Tk, canvas: tk.Canvas):
@@ -23,7 +27,7 @@ def capture_and_detect(root: tk.Tk, canvas: tk.Canvas):
         screen_img = ImageGrab.grab(bbox=(x1, y1, x2, y2))
         frame_rgb = np.array(screen_img)
 
-        results = model(frame_rgb, verbose=False)
+        results = model(frame_rgb, device=DEVICE, verbose=False)
 
         canvas.delete("detection")
 
