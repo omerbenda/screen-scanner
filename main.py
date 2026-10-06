@@ -24,7 +24,7 @@ def capture_and_detect(root: tk.Tk, canvas: tk.Canvas):
     y2 = y1 + h
 
     if w > 0 and h > 0:
-        screen_img = ImageGrab.grab(bbox=(x1, y1, x2, y2))
+        screen_img = ImageGrab.grab(bbox=(x1, y1, x2, y2), all_screens=True)
         frame_rgb = np.array(screen_img)
 
         results = model(frame_rgb, device=DEVICE, verbose=False)
