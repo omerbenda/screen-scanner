@@ -28,11 +28,12 @@ def capture_and_detect(root: tk.Tk, canvas: tk.Canvas):
         frame_rgb = np.array(screen_img)
 
         results = model(frame_rgb, device=DEVICE, verbose=False)
+        relevant_result = results[0]
 
         canvas.delete("detection")
 
-        boxes = results[0].boxes
-        names = results[0].names
+        boxes = relevant_result.boxes
+        names = relevant_result.names
 
         for box in boxes:
             bx1, by1, bx2, by2 = box.xyxy[0].tolist()
