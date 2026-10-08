@@ -10,4 +10,4 @@ install the [requirements-cpu.txt](requirements-cpu.txt) dependencies.
 If you do want to utilize the GPU for this app
 install the [requirements-gpu.txt](requirements-gpu.txt) dependencies.
 
-You can then run [main.py](main.py).
+You can then run [main.py](src/screen_scanner/main.py).
