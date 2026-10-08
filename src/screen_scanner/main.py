@@ -4,13 +4,16 @@ import numpy as np
 from PIL import ImageGrab
 from ultralytics import YOLO
 import torch
+from importlib.metadata import version
+import config
 
 TRANSPARENT_MASK_COLOR = "#00FF00"
 
 DEVICE = 0 if torch.cuda.is_available() else "cpu"
 print(f"Running YOLO inference on: {'GPU (CUDA)' if DEVICE == 0 else 'CPU'}")
 
-model = YOLO("../../models/yolo26x.pt")
+model_str = config.MODEL if not config.MODEL_PATH else f"{config.MODEL_PATH}/{config.MODEL}"
+model = YOLO(model_str)
 
 
 def capture_and_detect(root: tk.Tk, canvas: tk.Canvas):
@@ -70,12 +73,13 @@ def capture_and_detect(root: tk.Tk, canvas: tk.Canvas):
                 tags="detection",
             )
 
-    root.after(33, lambda: capture_and_detect(root, canvas))
+    root.after(config.INFERENCE_TIMEOUT_MS, lambda: capture_and_detect(root, canvas))
 
 
 if __name__ == "__main__":
     root = tk.Tk()
-    root.title("Screen Scanner")
+    version = version("screen-scanner")
+    root.title(f"Screen Scanner - {version}")
     root.geometry("960x540")
 
     root.config(bg=TRANSPARENT_MASK_COLOR)
