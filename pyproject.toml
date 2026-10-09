@@ -15,11 +15,11 @@ dependencies = [
 
 [project.optional-dependencies]
 cpu = [
-    "torch==2.14.1",
+    "torch",
     "torchvision",
 ]
 gpu = [
-    "torch==2.14.1+cu126",
+    "torch",
     "torchvision",
 ]
 
