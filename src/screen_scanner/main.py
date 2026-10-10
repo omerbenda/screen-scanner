@@ -1,7 +1,6 @@
 import sys
 import tkinter as tk
 from tkinter import messagebox
-
 import numpy as np
 from PIL import ImageGrab
 import torch
