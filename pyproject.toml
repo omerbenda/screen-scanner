@@ -14,13 +14,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-cpu = [
-    "torch",
-    "torchvision",
-]
-gpu = [
-    "torch",
-    "torchvision",
+build = [
+    "pyinstaller>=6.0.0",
 ]
 
 [tool.setuptools.packages.find]

@@ -12,8 +12,7 @@ TRANSPARENT_MASK_COLOR = "#00FF00"
 DEVICE = 0 if torch.cuda.is_available() else "cpu"
 print(f"Running YOLO inference on: {'GPU (CUDA)' if DEVICE == 0 else 'CPU'}")
 
-model_str = config.MODEL if not config.MODEL_PATH else f"{config.MODEL_PATH}/{config.MODEL}"
-model = YOLO(model_str)
+model = YOLO(f"../../models/{config.MODEL}")
 
 
 def capture_and_detect(root: tk.Tk, canvas: tk.Canvas):
