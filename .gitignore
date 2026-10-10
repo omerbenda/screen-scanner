@@ -220,3 +220,4 @@ __marimo__/
 .streamlit/secrets.toml
 
 models/
+src/screen_scanner/config.json
