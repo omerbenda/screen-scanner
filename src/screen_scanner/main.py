@@ -1,11 +1,14 @@
 import sys
 import tkinter as tk
+from tkinter import messagebox
+
 import numpy as np
 from PIL import ImageGrab
 import torch
 from importlib.metadata import version
+from ultralytics import YOLO
 import config
-from model import yolo_model
+from model import load_model
 
 TRANSPARENT_MASK_COLOR = "#00FF00"
 
@@ -13,7 +16,7 @@ DEVICE = 0 if torch.cuda.is_available() else "cpu"
 print(f"Running YOLO inference on: {'GPU (CUDA)' if DEVICE == 0 else 'CPU'}")
 
 
-def capture_and_detect(root: tk.Tk, canvas: tk.Canvas):
+def capture_and_detect(root: tk.Tk, canvas: tk.Canvas, model: YOLO):
     root.update_idletasks()
 
     x1 = root.winfo_rootx()
@@ -27,7 +30,7 @@ def capture_and_detect(root: tk.Tk, canvas: tk.Canvas):
         screen_img = ImageGrab.grab(bbox=(x1, y1, x2, y2), all_screens=True)
         frame_rgb = np.array(screen_img)
 
-        results = yolo_model(frame_rgb, device=DEVICE, verbose=False)
+        results = model(frame_rgb, device=DEVICE, verbose=False)
         relevant_result = results[0]
 
         canvas.delete("detection")
@@ -70,7 +73,7 @@ def capture_and_detect(root: tk.Tk, canvas: tk.Canvas):
                 tags="detection",
             )
 
-    root.after(config.inference_timeout_ms, lambda: capture_and_detect(root, canvas))
+    root.after(config.inference_timeout_ms, lambda: capture_and_detect(root, canvas, model))
 
 
 if __name__ == "__main__":
@@ -92,5 +95,17 @@ if __name__ == "__main__":
     )
     canvas.pack(fill=tk.BOTH, expand=True)
 
-    root.after(100, lambda: capture_and_detect(root, canvas))
+    try:
+        model: YOLO = load_model()
+    except Exception as e:
+        root_temp = tk.Tk()
+        root_temp.withdraw()
+        messagebox.showerror(
+            "Model Error",
+            f"Could not load model: '{config.model}'\n\n"
+            f"Please place your .pt file inside the 'models' folder."
+        )
+        sys.exit(1)
+
+    root.after(100, lambda: capture_and_detect(root, canvas, model))
     root.mainloop()

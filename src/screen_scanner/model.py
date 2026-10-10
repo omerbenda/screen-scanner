@@ -11,6 +11,7 @@ def _get_models_dir() -> Path:
     return Path(__file__).resolve().parents[2] / "models"
 
 
-_model_path: Path = _get_models_dir() / config.model
+def load_model() -> YOLO:
+    _model_path: Path = _get_models_dir() / config.model
 
-yolo_model: YOLO = YOLO(str(_model_path))
+    return YOLO(str(_model_path))
