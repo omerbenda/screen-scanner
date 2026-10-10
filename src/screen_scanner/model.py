@@ -15,3 +15,7 @@ def load_model() -> YOLO:
     _model_path: Path = _get_models_dir() / config.model
 
     return YOLO(str(_model_path))
+
+
+if __name__ == "__main__":
+    load_model()

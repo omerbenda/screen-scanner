@@ -12,9 +12,18 @@ install the [requirements-gpu.txt](requirements-gpu.txt) dependencies.
 
 You can then run [main.py](src/screen_scanner/main.py).
 
-## Bundling
-To bundle the app into an executable run the following commands:
+## Packaging
+To package the app into a standalone executable:
+
+**Install runtime dependencies:**
 * For CPU build: `pip install -r requirements-cpu.txt`
 * For GPU build: `pip install -r requirements-gpu.txt`
+
+**Install packaging tool:**
 * `pip install -e .[build]`
+
+**Fetch Model:**
+* Fetch the model currently in config: `python src/screen_scanner/model.py`
+
+**Package:**
 * `pyinstaller screen-scanner.spec`
