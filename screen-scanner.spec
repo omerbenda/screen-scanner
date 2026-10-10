@@ -1,17 +1,20 @@
 # -*- mode: python ; coding: utf-8 -*-
-from PyInstaller.utils.hooks import copy_metadata
+from PyInstaller.utils.hooks import collect_all, copy_metadata
+
+# Collect all torchvision C++ binaries, metadata, and hidden imports
+tv_datas, tv_binaries, tv_hiddenimports = collect_all('torchvision')
 
 datas = [('models', 'models')]
 datas += copy_metadata('screen-scanner')
 datas += copy_metadata('ultralytics')
-
+datas += tv_datas
 
 a = Analysis(
     ['src/screen_scanner/main.py'],
     pathex=['src/screen_scanner'],
-    binaries=[],
+    binaries=[*tv_binaries],
     datas=datas,
-    hiddenimports=[],
+    hiddenimports=[*tv_hiddenimports],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -43,7 +46,7 @@ coll = COLLECT(
     a.binaries,
     a.datas,
     strip=False,
-    upx=True,
+    upx=False,
     upx_exclude=[],
     name='screen-scanner',
 )
