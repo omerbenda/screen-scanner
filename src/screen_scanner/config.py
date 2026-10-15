@@ -17,7 +17,10 @@ def _get_config_path() -> Path:
     return Path(__file__).parent / name
 
 
-def _load_config(filepath=_get_config_path()) -> dict:
+def _load_config(filepath: Path | None = None) -> dict:
+    if filepath is None:
+        filepath = _get_config_path()
+
     if not filepath.exists():
         with open(filepath, "w") as f:
             json.dump(default_config, f, indent=2)

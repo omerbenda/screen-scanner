@@ -40,4 +40,4 @@ To package the app into a standalone executable:
 If the model specified in config is not found in the models folder, the app will try to fetch the model.
 
 **Package:**
-* `pyinstaller --clean screen-scanner.spec`
+* `pyinstaller --clean -y screen-scanner.spec`
