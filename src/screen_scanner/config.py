@@ -3,7 +3,7 @@ from pathlib import Path
 import json
 
 default_config = {
-    "inference_timeout_ms": 500,
+    "inference_timeout_sec": 0.1,
     "model": "yolo26x.pt"
 }
 

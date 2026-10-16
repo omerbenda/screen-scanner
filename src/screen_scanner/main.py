@@ -51,7 +51,7 @@ def add_detection(root: tk.Tk, model: YOLO) -> None:
 
         if frame_bgr is not None:
             with torch.inference_mode():
-                results = model(frame_bgr, device=DEVICE, verbose=False, quantize="fp16" if DEVICE == 0 else None, )
+                results = model(frame_bgr, device=DEVICE, verbose=False, quantize="fp16" if DEVICE == 0 else None)
 
                 if detection_queue.full():
                     try:
@@ -60,7 +60,7 @@ def add_detection(root: tk.Tk, model: YOLO) -> None:
                         pass
                 detection_queue.put(results[0])
         else:
-            time.sleep(0.02)
+            time.sleep(config.inference_timeout_ms)
 
 
 def update_ui(root: tk.Tk, canvas: tk.Canvas) -> None:
