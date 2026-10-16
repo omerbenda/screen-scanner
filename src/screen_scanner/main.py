@@ -1,8 +1,10 @@
+import ctypes
 import sys
 import tkinter as tk
 from tkinter import messagebox
+from typing import Optional
+import mss
 import numpy as np
-from PIL import ImageGrab
 import torch
 from importlib.metadata import version
 from ultralytics import YOLO
@@ -14,22 +16,31 @@ TRANSPARENT_MASK_COLOR = "#00FF00"
 DEVICE = 0 if torch.cuda.is_available() else "cpu"
 print(f"Running YOLO inference on: {'GPU (CUDA)' if DEVICE == 0 else 'CPU'}")
 
+sct = mss.MSS()
+
+
+def capture_bgr(root: tk.Tk) -> Optional[np.ndarray]:
+    x = root.winfo_rootx()
+    y = root.winfo_rooty()
+    w = root.winfo_width()
+    h = root.winfo_height()
+
+    if w > 1 and h > 1:
+        monitor_region = {"top": y, "left": x, "width": w, "height": h}
+        sct_img = sct.grab(monitor_region)
+        frame_bgra = np.array(sct_img)
+
+        return frame_bgra[:, :, :3]
+
+    return None
+
 
 def capture_and_detect(root: tk.Tk, canvas: tk.Canvas, model: YOLO):
     root.update_idletasks()
+    frame_bgr = capture_bgr(root)
 
-    x1 = root.winfo_rootx()
-    y1 = root.winfo_rooty()
-    w = root.winfo_width()
-    h = root.winfo_height()
-    x2 = x1 + w
-    y2 = y1 + h
-
-    if w > 0 and h > 0:
-        screen_img = ImageGrab.grab(bbox=(x1, y1, x2, y2), all_screens=True)
-        frame_rgb = np.array(screen_img)
-
-        results = model(frame_rgb, device=DEVICE, verbose=False)
+    if frame_bgr is not None:
+        results = model(frame_bgr, device=DEVICE, verbose=False)
         relevant_result = results[0]
 
         canvas.delete("detection")
@@ -82,9 +93,23 @@ if __name__ == "__main__":
     root.geometry("960x540")
 
     root.config(bg=TRANSPARENT_MASK_COLOR)
+    root.attributes("-topmost", True)
+
     if sys.platform.startswith("win"):
         root.wm_attributes("-transparentcolor", TRANSPARENT_MASK_COLOR)
-    root.attributes("-topmost", True)
+
+        try:
+            root.update_idletasks()
+
+            child_hwnd = root.winfo_id()
+            top_hwnd = ctypes.windll.user32.GetParent(child_hwnd) or child_hwnd
+
+            WDA_EXCLUDEFROMCAPTURE = 0x00000011
+            success = ctypes.windll.user32.SetWindowDisplayAffinity(top_hwnd, WDA_EXCLUDEFROMCAPTURE)
+            if not success:
+                print("Warning: SetWindowDisplayAffinity failed to apply.")
+        except Exception as e:
+            print(f"Could not set display affinity: {e}")
 
     canvas = tk.Canvas(
         root,
