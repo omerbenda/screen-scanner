@@ -27,10 +27,14 @@ def capture_bgr(root: tk.Tk) -> Optional[np.ndarray]:
 
     if w > 1 and h > 1:
         monitor_region = {"top": y, "left": x, "width": w, "height": h}
-        sct_img = sct.grab(monitor_region)
-        frame_bgra = np.array(sct_img)
 
-        return frame_bgra[:, :, :3]
+        try:
+            sct_img = sct.grab(monitor_region)
+            frame_bgra = np.asarray(sct_img)
+
+            return frame_bgra[:, :, :3]
+        except mss.exception.ScreenShotError:
+            return None
 
     return None
 
