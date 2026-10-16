@@ -11,8 +11,6 @@ import screen_scanner.model as model
 from screen_scanner.capture import ScreenCapture
 from screen_scanner.overlay import OverlayWindow
 
-TRANSPARENT_MASK_COLOR = "#00FF00"
-
 DEVICE = 0 if torch.cuda.is_available() else "cpu"
 print(f"Running YOLO inference on: {'GPU (CUDA)' if DEVICE == 0 else 'CPU'}")
 
