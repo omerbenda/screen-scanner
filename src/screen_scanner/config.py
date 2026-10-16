@@ -33,5 +33,5 @@ def _load_config(filepath: Path | None = None) -> dict:
 
 _config_data = _load_config()
 
-inference_timeout_ms: int = _config_data["inference_timeout_ms"]
+inference_timeout_ms: int = _config_data["inference_timeout_sec"]
 model: str = _config_data["model"]
