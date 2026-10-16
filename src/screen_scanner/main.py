@@ -1,5 +1,8 @@
 import ctypes
+import queue
 import sys
+import threading
+import time
 import tkinter as tk
 from tkinter import messagebox
 from typing import Optional
@@ -18,34 +21,51 @@ print(f"Running YOLO inference on: {'GPU (CUDA)' if DEVICE == 0 else 'CPU'}")
 
 sct = mss.MSS()
 
+detection_queue: queue.Queue = queue.Queue(maxsize=1)
+running = True
+
 
 def capture_bgr(root: tk.Tk) -> Optional[np.ndarray]:
-    x = root.winfo_rootx()
-    y = root.winfo_rooty()
-    w = root.winfo_width()
-    h = root.winfo_height()
+    try:
+        x = root.winfo_rootx()
+        y = root.winfo_rooty()
+        w = root.winfo_width()
+        h = root.winfo_height()
 
-    if w > 1 and h > 1:
-        monitor_region = {"top": y, "left": x, "width": w, "height": h}
+        if w > 1 and h > 1:
+            monitor_region = {"top": y, "left": x, "width": w, "height": h}
 
-        try:
             sct_img = sct.grab(monitor_region)
             frame_bgra = np.asarray(sct_img)
 
             return frame_bgra[:, :, :3]
-        except mss.exception.ScreenShotError:
-            return None
+    except Exception:
+        return None
 
     return None
 
 
-def capture_and_detect(root: tk.Tk, canvas: tk.Canvas, model: YOLO):
-    root.update_idletasks()
-    frame_bgr = capture_bgr(root)
+def add_detection(root: tk.Tk, model: YOLO) -> None:
+    while running:
+        frame_bgr = capture_bgr(root)
 
-    if frame_bgr is not None:
-        results = model(frame_bgr, device=DEVICE, verbose=False)
-        relevant_result = results[0]
+        if frame_bgr is not None:
+            with torch.inference_mode():
+                results = model(frame_bgr, device=DEVICE, verbose=False, quantize="fp16" if DEVICE == 0 else None, )
+
+                if detection_queue.full():
+                    try:
+                        detection_queue.get_nowait()
+                    except queue.Empty:
+                        pass
+                detection_queue.put(results[0])
+        else:
+            time.sleep(0.02)
+
+
+def update_ui(root: tk.Tk, canvas: tk.Canvas) -> None:
+    try:
+        relevant_result = detection_queue.get_nowait()
 
         canvas.delete("detection")
 
@@ -86,16 +106,30 @@ def capture_and_detect(root: tk.Tk, canvas: tk.Canvas, model: YOLO):
                 font=("Arial", 9, "bold"),
                 tags="detection",
             )
+    except queue.Empty:
+        pass
 
-    root.after(config.inference_timeout_ms, lambda: capture_and_detect(root, canvas, model))
+    root.after(16, lambda: update_ui(root, canvas))
 
 
 def on_close(root: tk.Tk) -> None:
+    global running
+
+    running = False
     sct.close()
     root.destroy()
 
 
 def create_root() -> tk.Tk:
+    try:
+        # DPI awareness, must be called before window is created
+        ctypes.windll.shcore.SetProcessDpiAwareness(2)
+    except Exception:
+        try:
+            ctypes.windll.user32.SetProcessDPIAware()
+        except Exception:
+            pass
+
     root = tk.Tk()
     version_str = version("screen-scanner")
     root.title(f"Screen Scanner - {version_str}")
@@ -147,5 +181,12 @@ if __name__ == "__main__":
     )
     canvas.pack(fill=tk.BOTH, expand=True)
 
-    root.after(100, lambda: capture_and_detect(root, canvas, model))
+    worker_thread = threading.Thread(
+        target=add_detection,
+        args=(root, model),
+        daemon=True,
+    )
+    worker_thread.start()
+
+    root.after(100, lambda: update_ui(root, canvas))
     root.mainloop()
