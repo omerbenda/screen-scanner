@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 from ultralytics import YOLO
-import config
+import screen_scanner.config as config
 
 
 def _get_models_dir() -> Path:
