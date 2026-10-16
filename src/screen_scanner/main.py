@@ -86,10 +86,10 @@ def capture_and_detect(root: tk.Tk, canvas: tk.Canvas, model: YOLO):
     root.after(config.inference_timeout_ms, lambda: capture_and_detect(root, canvas, model))
 
 
-if __name__ == "__main__":
+def create_root() -> tk.Tk:
     root = tk.Tk()
-    version = version("screen-scanner")
-    root.title(f"Screen Scanner - {version}")
+    version_str = version("screen-scanner")
+    root.title(f"Screen Scanner - {version_str}")
     root.geometry("960x540")
 
     root.config(bg=TRANSPARENT_MASK_COLOR)
@@ -111,6 +111,24 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"Could not set display affinity: {e}")
 
+    return root
+
+
+if __name__ == "__main__":
+    try:
+        model: YOLO = load_model()
+    except Exception as e:
+        temp_root = tk.Tk()
+        temp_root.withdraw()
+        messagebox.showerror(
+            "Model Error",
+            f"Could not load model: '{config.model}'\n\n"
+            f"Please place your .pt file inside the 'models' folder."
+        )
+        sys.exit(1)
+
+    root = create_root()
+
     canvas = tk.Canvas(
         root,
         bg=TRANSPARENT_MASK_COLOR,
@@ -118,18 +136,6 @@ if __name__ == "__main__":
         bd=0,
     )
     canvas.pack(fill=tk.BOTH, expand=True)
-
-    try:
-        model: YOLO = load_model()
-    except Exception as e:
-        root_temp = tk.Tk()
-        root_temp.withdraw()
-        messagebox.showerror(
-            "Model Error",
-            f"Could not load model: '{config.model}'\n\n"
-            f"Please place your .pt file inside the 'models' folder."
-        )
-        sys.exit(1)
 
     root.after(100, lambda: capture_and_detect(root, canvas, model))
     root.mainloop()
