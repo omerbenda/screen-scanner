@@ -18,10 +18,10 @@ The config JSON is created when running either
 
 The JSON contains the following fields:
 
-| Field Name           | Type   | Description                                                  |
-|:---------------------|:-------|:-------------------------------------------------------------|
-| inference_timeout_ms | number | The time in milliseconds between each inference              |
-| model                | string | model name, decides which model in the models folder is used |
+| Field Name            | Type   | Description                                                  |
+|:----------------------|:-------|:-------------------------------------------------------------|
+| inference_timeout_sec | number | The time in seconds between each inference                   |
+| model                 | string | model name, decides which model in the models folder is used |
 
 
 ## Packaging

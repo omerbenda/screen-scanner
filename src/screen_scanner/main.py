@@ -6,7 +6,7 @@ import tkinter as tk
 from tkinter import messagebox
 import torch
 from ultralytics import YOLO
-import config
+import screen_scanner.config as config
 import screen_scanner.model as model
 from screen_scanner.capture import ScreenCapture
 from screen_scanner.overlay import OverlayWindow
@@ -15,28 +15,28 @@ DEVICE = 0 if torch.cuda.is_available() else "cpu"
 print(f"Running YOLO inference on: {'GPU (CUDA)' if DEVICE == 0 else 'CPU'}")
 
 
+def _load_model_or_exit() -> YOLO:
+    try:
+        return model.load_model()
+    except Exception:
+        temp_root = tk.Tk()
+        temp_root.withdraw()
+        messagebox.showerror(
+            "Model Error",
+            f"Could not load model: '{config.model}'\n\n"
+            f"Please place your .pt file inside the 'models' folder."
+        )
+        sys.exit(1)
+
+
 class ScreenScannerApp:
     def __init__(self):
-        self.model = ScreenScannerApp._load_model_or_exit()
+        self.model = _load_model_or_exit()
         self.capture = ScreenCapture()
         self.detection_queue = queue.Queue(maxsize=1)
         self.running = True
 
         self.overlay = OverlayWindow(on_close_callback=self.stop)
-
-    @staticmethod
-    def _load_model_or_exit() -> YOLO:
-        try:
-            return model.load_model()
-        except Exception:
-            temp_root = tk.Tk()
-            temp_root.withdraw()
-            messagebox.showerror(
-                "Model Error",
-                f"Could not load model: '{config.model}'\n\n"
-                f"Please place your .pt file inside the 'models' folder."
-            )
-            sys.exit(1)
 
     def detection_worker(self):
         while self.running:
@@ -60,7 +60,7 @@ class ScreenScannerApp:
 
                     self.detection_queue.put(results[0])
             else:
-                time.sleep(0.02)
+                time.sleep(config.inference_timeout_sec)
 
     def update_ui(self):
         try:
