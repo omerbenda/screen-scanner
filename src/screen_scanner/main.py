@@ -86,6 +86,11 @@ def capture_and_detect(root: tk.Tk, canvas: tk.Canvas, model: YOLO):
     root.after(config.inference_timeout_ms, lambda: capture_and_detect(root, canvas, model))
 
 
+def on_close(root: tk.Tk) -> None:
+    sct.close()
+    root.destroy()
+
+
 def create_root() -> tk.Tk:
     root = tk.Tk()
     version_str = version("screen-scanner")
@@ -93,6 +98,7 @@ def create_root() -> tk.Tk:
     root.geometry("960x540")
 
     root.config(bg=TRANSPARENT_MASK_COLOR)
+    root.protocol("WM_DELETE_WINDOW", lambda: on_close(root))
     root.attributes("-topmost", True)
 
     if sys.platform.startswith("win"):
