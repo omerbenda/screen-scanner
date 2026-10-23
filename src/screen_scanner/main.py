@@ -1,110 +1,112 @@
+import ctypes
+import queue
 import sys
+import threading
+import time
 import tkinter as tk
 from tkinter import messagebox
-import numpy as np
-from PIL import ImageGrab
 import torch
-from importlib.metadata import version
 from ultralytics import YOLO
-import config
-from model import load_model
-
-TRANSPARENT_MASK_COLOR = "#00FF00"
+import screen_scanner.config as config
+import screen_scanner.model as model
+from screen_scanner.capture import ScreenCapture
+from screen_scanner.loading import LoadingScreen
+from screen_scanner.overlay import OverlayWindow
 
 DEVICE = 0 if torch.cuda.is_available() else "cpu"
 print(f"Running YOLO inference on: {'GPU (CUDA)' if DEVICE == 0 else 'CPU'}")
 
 
-def capture_and_detect(root: tk.Tk, canvas: tk.Canvas, model: YOLO):
-    root.update_idletasks()
+def _set_dpi_awareness() -> None:
+    if sys.platform.startswith("win"):
+        try:
+            ctypes.windll.shcore.SetProcessDpiAwareness(2)
+        except Exception:
+            try:
+                ctypes.windll.user32.SetProcessDPIAware()
+            except Exception:
+                pass
 
-    x1 = root.winfo_rootx()
-    y1 = root.winfo_rooty()
-    w = root.winfo_width()
-    h = root.winfo_height()
-    x2 = x1 + w
-    y2 = y1 + h
 
-    if w > 0 and h > 0:
-        screen_img = ImageGrab.grab(bbox=(x1, y1, x2, y2), all_screens=True)
-        frame_rgb = np.array(screen_img)
+class ScreenScannerApp:
+    def __init__(self):
+        _set_dpi_awareness()
 
-        results = model(frame_rgb, device=DEVICE, verbose=False)
-        relevant_result = results[0]
+        self.root = tk.Tk()
+        self.model = self._load_model_or_exit()
+        self.capture = ScreenCapture()
+        self.detection_queue = queue.Queue(maxsize=1)
+        self.running = True
 
-        canvas.delete("detection")
+        self.overlay = OverlayWindow(on_close_callback=self.stop, root=self.root)
 
-        boxes = relevant_result.boxes
-        names = relevant_result.names
+    def _load_model_or_exit(self) -> YOLO:
+        model_path = model.get_model_path()
 
-        for box in boxes:
-            bx1, by1, bx2, by2 = box.xyxy[0].tolist()
-            cls_id = int(box.cls[0].item())
-            conf = float(box.conf[0].item())
-            label = f"{names[cls_id]} {conf:.2f}"
+        try:
+            if model_path.is_file():
+                return model.load_model()
+            else:
+                loader = LoadingScreen(self.root, config.model)
 
-            canvas.create_rectangle(
-                bx1,
-                by1,
-                bx2,
-                by2,
-                outline="red",
-                width=2,
-                tags="detection",
+                return loader.load(model.load_model)
+        except Exception as e:
+            messagebox.showerror(
+                "Model Error",
+                f"Could not load model: '{config.model}'\n\n"
+                f"Error: {e}\n\n"
+                f"Please place your .pt file inside the 'models' folder.",
+                parent=self.root,
             )
 
-            canvas.create_rectangle(
-                bx1,
-                max(0, by1 - 18),
-                bx1 + (len(label) * 8) + 4,
-                by1,
-                fill="red",
-                outline="red",
-                tags="detection",
-            )
-            canvas.create_text(
-                bx1 + 2,
-                max(0, by1 - 16),
-                anchor="nw",
-                text=label,
-                fill="white",
-                font=("Arial", 9, "bold"),
-                tags="detection",
-            )
+            self.root.destroy()
+            sys.exit(1)
 
-    root.after(config.inference_timeout_ms, lambda: capture_and_detect(root, canvas, model))
+    def detection_worker(self):
+        while self.running:
+            x, y, w, h = self.overlay.get_bounds()
+            frame_bgr = self.capture.grab_region(x, y, w, h)
+
+            if frame_bgr is not None:
+                with torch.inference_mode():
+                    results = self.model(
+                        frame_bgr,
+                        device=DEVICE,
+                        verbose=False,
+                        quantize="fp16" if DEVICE == 0 else None,
+                    )
+
+                    if self.detection_queue.full():
+                        try:
+                            self.detection_queue.get_nowait()
+                        except queue.Empty:
+                            pass
+
+                    self.detection_queue.put(results[0])
+            else:
+                time.sleep(config.inference_timeout_sec)
+
+    def update_ui(self):
+        try:
+            result = self.detection_queue.get_nowait()
+            self.overlay.draw_detections(result)
+        except queue.Empty:
+            pass
+
+        self.overlay.schedule(16, self.update_ui)
+
+    def stop(self):
+        self.running = False
+        self.capture.close()
+        self.overlay.destroy()
+
+    def run(self):
+        thread = threading.Thread(target=self.detection_worker, daemon=True)
+        thread.start()
+        self.overlay.schedule(100, self.update_ui)
+        self.overlay.mainloop()
 
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    version = version("screen-scanner")
-    root.title(f"Screen Scanner - {version}")
-    root.geometry("960x540")
-
-    root.config(bg=TRANSPARENT_MASK_COLOR)
-    if sys.platform.startswith("win"):
-        root.wm_attributes("-transparentcolor", TRANSPARENT_MASK_COLOR)
-    root.attributes("-topmost", True)
-
-    canvas = tk.Canvas(
-        root,
-        bg=TRANSPARENT_MASK_COLOR,
-        highlightthickness=0,
-        bd=0,
-    )
-    canvas.pack(fill=tk.BOTH, expand=True)
-
-    try:
-        model: YOLO = load_model()
-    except Exception as e:
-        root_temp = tk.Tk()
-        root_temp.withdraw()
-        messagebox.showerror(
-            "Model Error",
-            f"Could not load model: '{config.model}'\n\n"
-            f"Please place your .pt file inside the 'models' folder."
-        )
-        sys.exit(1)
-
-    root.after(100, lambda: capture_and_detect(root, canvas, model))
-    root.mainloop()
+    app = ScreenScannerApp()
+    app.run()

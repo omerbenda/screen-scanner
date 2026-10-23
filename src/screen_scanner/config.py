@@ -3,7 +3,7 @@ from pathlib import Path
 import json
 
 default_config = {
-    "inference_timeout_ms": 500,
+    "inference_timeout_sec": 0.1,
     "model": "yolo26x.pt"
 }
 
@@ -33,5 +33,5 @@ def _load_config(filepath: Path | None = None) -> dict:
 
 _config_data = _load_config()
 
-inference_timeout_ms: int = _config_data["inference_timeout_ms"]
+inference_timeout_sec: float = _config_data["inference_timeout_sec"]
 model: str = _config_data["model"]
