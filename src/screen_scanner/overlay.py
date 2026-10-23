@@ -7,26 +7,14 @@ import tkinter as tk
 TRANSPARENT_MASK_COLOR = "#00FF00"
 
 
-def _set_dpi_awareness() -> None:
-    if sys.platform.startswith("win"):
-        try:
-            ctypes.windll.shcore.SetProcessDpiAwareness(2)
-        except Exception:
-            try:
-                ctypes.windll.user32.SetProcessDPIAware()
-            except Exception:
-                pass
-
-
 class OverlayWindow:
-    def __init__(self, on_close_callback: Callable[[], None]):
-        _set_dpi_awareness()
-
-        self.root = tk.Tk()
+    def __init__(self, on_close_callback: Callable[[], None], root: tk.Tk | None = None):
+        self.root = root if root is not None else tk.Tk()
 
         version_str = version("screen-scanner")
         self.root.title(f"Screen Scanner - {version_str}")
         self.root.geometry("960x540")
+        self.root.resizable(True, True)
 
         self.root.config(bg=TRANSPARENT_MASK_COLOR)
         self.root.attributes("-topmost", True)
